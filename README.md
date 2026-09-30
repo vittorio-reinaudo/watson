@@ -40,7 +40,7 @@ I dettagli completi sono in [`SPEC.md`](SPEC.md).
 
 ## Stato
 
-Versione **v0.2**: catturare, interrogare e annullare. Funzionano note, todo, persone e progetti, ricerche, riepiloghi e briefing per 1:1 e meeting, `watson annulla`, la continuità tra comandi entro 10 minuti, le domande chiuse in caso di dubbio e le bozze in `inbox/` quando interrompi. Arriva nella prossima versione Eevee, per far evolvere Watson. Le novità di ogni versione sono in [`CHANGELOG.md`](CHANGELOG.md).
+Versione **v0.3**: tutto ciò che descrive questo README. Note, todo, persone e progetti; ricerche, riepiloghi e briefing; `watson annulla`; continuità tra comandi entro 10 minuti; domande chiuse e bozze in `inbox/`; riordino con Wall-E ed evoluzione di Watson con Eevee. Le novità di ogni versione sono in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requisiti
 
@@ -160,6 +160,8 @@ Sembra una modifica a Watson stesso. Cosa preferisci?
 
 Se scegli di lavorarci subito, Eevee, l'agente di evoluzione, ti aiuta a definire la modifica e propone alternative e casi limite. Prima di applicare ti mostra le differenze e aspetta la tua conferma. Le modifiche passano sempre da uno script che esegue i test e si rifiuta di applicare qualcosa che romperebbe il comportamento esistente. Ogni modifica applicata aggiorna `SPEC.md`, viene registrata in `CHANGELOG.md` con un tag di versione, e il plugin installato si aggiorna da solo.
 
+Watson è un plugin di Claude Code e non può partire da solo a un orario: per richieste come un riepilogo automatico, Eevee propone l'alternativa più vicina (per esempio una riga di `cron` che lancia `watson`).
+
 Se cambi idea:
 
 ```bash
@@ -177,7 +179,7 @@ git pull
 ./install.sh
 ```
 
-Per tornare a una versione precedente, se una modifica non ti convince:
+Per tornare a una versione precedente, se una modifica non ti convince (per annullare solo l'ultima evoluzione basta `watson annulla l'ultima modifica a watson`):
 
 ```bash
 git checkout watson-v0.3
@@ -185,6 +187,8 @@ git checkout watson-v0.3
 ```
 
 Le tue note in `221b` non vengono toccate in nessuno dei due casi.
+
+Dopo un `git checkout` di una versione il clone non è su un ramo, ed Eevee non applica nuove modifiche finché non torni su `main` (`git checkout main`).
 
 ## Backup e privacy
 

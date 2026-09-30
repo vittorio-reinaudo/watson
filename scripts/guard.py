@@ -13,7 +13,12 @@ import shlex
 import sys
 
 PLUGIN = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-SCRIPT_AMMESSI = ["azione.sh", "bozza.sh", "delorean.sh", "eevee_applica.sh", "marauders_map.py", "test_routing.sh"]
+SCRIPT_AMMESSI = ["azione.sh", "bozza.sh", "cerca.sh", "delorean.sh", "eevee_applica.sh", "marauders_map.py",
+                  "test_routing.sh"]
+# Gli agenti hanno permessi propri; chi non è elencato (anche un agente generico) può solo cercare.
+SCRIPT_PER_AGENTE = {"wall-e": ["azione.sh", "cerca.sh", "marauders_map.py"]}
+SOLO_LAVORI = ("eevee",)
+SCRIVONO = ("wall-e", "eevee")
 CARTELLE = ("note", "persone", "progetti", "inbox")
 FILE = ("preferenze.md", "esempi-personali.md")
 SCRITTURA = ("Write", "Edit", "MultiEdit", "NotebookEdit")
@@ -36,8 +41,17 @@ def brain_di(dati):
     return root if os.path.isdir(os.path.join(root, "diario-di-bordo")) else None
 
 
+def agente(dati):
+    """None per la sessione principale, altrimenti il nome dell'agente senza il prefisso del plugin."""
+    tipo = dati.get("agent_type") or ("?" if dati.get("agent_id") else None)
+    return tipo.split(":")[-1] if tipo else None
+
+
 def controlla_scrittura(brain, dati):
     ti = dati.get("tool_input") or {}
+    chi = agente(dati)
+    if chi is not None and chi not in SCRIVONO:
+        decidi("deny", f"L'agente {chi} è di sola lettura: restituisci il risultato all'orchestratore.")
     grezzo = ti.get("file_path") or ti.get("notebook_path") or ""
     p = os.path.realpath(os.path.join(dati.get("cwd") or brain, os.path.expanduser(grezzo)))
     lavori = os.path.realpath(os.path.expanduser("~/.watson/lavori"))
@@ -47,6 +61,8 @@ def controlla_scrittura(brain, dati):
                        "prepara le modifiche in ~/.watson/lavori/ e applicale con eevee_applica.sh.")
     if dentro(p, lavori):
         decidi("allow", "area di lavoro di Eevee")
+    if chi in SOLO_LAVORI:
+        decidi("deny", "Eevee scrive solo nell'area di lavoro ~/.watson/lavori/.")
     if not dentro(p, brain):
         decidi("deny", "Watson scrive solo dentro 221b e nell'area di lavoro ~/.watson/lavori/.")
     rel = os.path.relpath(p, brain)
@@ -60,11 +76,25 @@ def controlla_scrittura(brain, dati):
                    "ed esempi-personali.md.")
 
 
+def controlla_lettura(brain, dati):
+    """Concede la lettura del prodotto e dell'area di lavoro di Eevee, che stanno fuori da 221b."""
+    ti = dati.get("tool_input") or {}
+    grezzo = ti.get("file_path") or ti.get("path") or brain
+    p = os.path.realpath(os.path.join(dati.get("cwd") or brain, os.path.expanduser(grezzo)))
+    ammesse = [brain, PLUGIN, os.path.realpath(os.path.expanduser("~/.watson/lavori"))]
+    if os.environ.get("WATSON_HOME"):
+        ammesse.append(os.path.realpath(os.environ["WATSON_HOME"]))
+    if any(dentro(p, a) for a in ammesse):
+        decidi("allow", "lettura ammessa")
+
+
 def controlla_shell(dati):
     cmd = (dati.get("tool_input") or {}).get("command", "")
     elenco = ", ".join(os.path.join(PLUGIN, "scripts", s) for s in SCRIPT_AMMESSI)
     rifiuto = ("Watson esegue solo gli script del plugin, chiamati direttamente con il percorso assoluto e "
-               f"senza operatori di shell (; | & > < $ `): {elenco}.")
+               f"senza operatori di shell (; | & > < $ `): {elenco}. Per elencare o cercare file usa Glob e Grep; "
+               f"se non sono disponibili, {os.path.join(PLUGIN, 'scripts', 'cerca.sh')} file \"*.md\" inbox "
+               f"oppure {os.path.join(PLUGIN, 'scripts', 'cerca.sh')} testo \"stato: aperto\" note.")
     if cmd.split()[:1] == ["git"]:
         decidi("deny", "Niente git diretto: i commit li fa azione.sh, gli annullamenti delorean.sh. " + rifiuto)
     if "\n" in cmd or "`" in cmd or "$" in cmd:
@@ -78,8 +108,12 @@ def controlla_shell(dati):
     if not token or any(t and all(c in "();<>|&" for c in t) for t in token):
         decidi("deny", rifiuto)
     eseguibile = os.path.realpath(os.path.expanduser(token[0]))
-    if os.path.dirname(eseguibile) == os.path.join(PLUGIN, "scripts") and os.path.basename(eseguibile) in SCRIPT_AMMESSI:
+    chi = agente(dati)
+    ammessi = SCRIPT_AMMESSI if chi is None else SCRIPT_PER_AGENTE.get(chi, ["cerca.sh"])
+    if os.path.dirname(eseguibile) == os.path.join(PLUGIN, "scripts") and os.path.basename(eseguibile) in ammessi:
         decidi("allow", "script del plugin")
+    if chi is not None:
+        decidi("deny", f"All'agente {chi} sono permessi solo: {', '.join(ammessi)}. " + rifiuto)
     decidi("deny", rifiuto)
 
 
@@ -89,8 +123,18 @@ def main():
     if brain is None:
         sys.exit(0)  # fuori da 221b il guard non interviene
     nome = dati.get("tool_name", "")
+    try:
+        with open(os.path.join(brain, ".watson", "ultimo-messaggio"), encoding="utf-8") as f:
+            dry_run = f.read().lstrip().startswith("[dry-run]")
+    except OSError:
+        dry_run = False
+    if dry_run and nome not in ("Read", "Glob", "Grep"):
+        decidi("deny", "Modalità dry-run: non si scrive e non si usano strumenti, skill o agenti. "
+                       "Rispondi solo con la riga JSON delle intenzioni.")
     if nome in SCRITTURA:
         controlla_scrittura(brain, dati)
+    if nome in ("Read", "Glob", "Grep"):
+        controlla_lettura(brain, dati)
     if nome == "Bash":
         controlla_shell(dati)
     if nome.startswith("mcp__") or nome in ("WebFetch", "WebSearch"):

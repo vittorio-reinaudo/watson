@@ -1,6 +1,6 @@
 ---
 name: delorean
-description: Annulla un'azione di Watson in 221b (una nota, un todo, una correzione, una preferenza appresa, persino un altro annullamento) o consulta lo storico delle azioni. Usala quando l'utente vuole tornare indietro. Esempi - "annulla", "annulla l'ultima nota su luca", "no, togli quel todo che hai appena creato", "annulla l'annullamento", "cosa hai fatto oggi?". Non usarla per correggere il contenuto di una nota (memento) né per annullare una modifica a Watson stesso (quella passa da eevee_applica.sh --annulla).
+description: Annulla un'azione di Watson in 221b (una nota, un todo, una correzione, una preferenza appresa, persino un altro annullamento) o consulta lo storico delle azioni. Usala quando l'utente vuole tornare indietro. Esempi - "annulla", "annulla l'ultima nota su luca", "no, togli quel todo che hai appena creato", "annulla l'annullamento", "cosa hai fatto oggi?". Copre anche "annulla l'ultima modifica a watson", che torna alla versione precedente del prodotto. Non usarla per correggere il contenuto di una nota (memento).
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
@@ -22,6 +22,16 @@ allowed-tools: Read, Grep, Glob, Bash
    - Uscita 2, conflitto: azioni successive hanno toccato gli stessi file. Non procedere da solo: mostra i file e fai la domanda chiusa, per esempio `? L'azione è stata modificata dopo da altre azioni: cosa faccio?` con le opzioni `1. annulla prima le azioni successive su quei file` e `2. lascia tutto com'è`.
    - Uscita 1 con "lascerebbe il grafo incoerente": spiega in una riga cosa si romperebbe (per esempio una nota che cita la persona che vorresti togliere) e proponi cosa fare prima.
 4. **Resoconto**: `⚡ DeLorean · Grande Giove! Annullata "<titolo della nota o dell'azione>"`. Se era una preferenza appresa, aggiungi ` · preferenza tolta`.
+
+## Annullare una modifica a Watson
+
+"annulla l'ultima modifica a watson" torna alla versione precedente del prodotto senza toccare le note:
+
+```
+${CLAUDE_PLUGIN_ROOT}/scripts/eevee_applica.sh --annulla
+```
+
+Lo script stampa la nuova versione. Resoconto: `⚡ DeLorean · Grande Giove! Annullata "<ultima modifica a Watson>" · Watson torna com'era, ora v<versione>`.
 
 ## Consultare lo storico
 

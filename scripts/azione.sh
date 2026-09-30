@@ -2,12 +2,13 @@
 # Chiude ogni azione che scrive in 221b: rigenera l'indice, verifica le invarianti,
 # aggiunge la riga al diario e fa un solo commit a nome dell'utente.
 #
-# Uso: azione.sh --tipo T --sommario S [--scope P] [--dettaglio D] [--frase F]
+# Uso: azione.sh --tipo T --sommario S [--scope P] [--dettaglio D] [--frase F] [--rimuovi inbox/FILE]...
 #   --tipo       cattura | aggiorna | mantieni | impara | annulla | bozza
 #   --sommario   oggetto del commit, per esempio "incidente sul rilascio"
 #   --scope      progetto/persona, per esempio alpha/luca
 #   --dettaglio  terzo campo del diario, per esempio "incidente" o "todo chiuso"
 #   --frase      la frase originale; se manca, l'ultimo messaggio dell'utente (.watson/ultimo-messaggio)
+#   --rimuovi    toglie una bozza da inbox/ dopo averla ripresa (ripetibile; solo file di inbox/)
 # Stampa l'id dell'azione. Esce con 1 se la verifica rifiuta il commit, 3 se non c'è niente da registrare.
 set -euo pipefail
 
@@ -15,8 +16,8 @@ QUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN="$(dirname "$QUI")"
 BRAIN="${WATSON_BRAIN_DIR:-$PWD}"
 
-USO="Uso: azione.sh --tipo T --sommario S [--scope P] [--dettaglio D] [--frase F]"
-TIPO="" SCOPE="" SOMMARIO="" DETTAGLIO="" FRASE="" HA_FRASE=0
+USO="Uso: azione.sh --tipo T --sommario S [--scope P] [--dettaglio D] [--frase F] [--rimuovi inbox/FILE]..."
+TIPO="" SCOPE="" SOMMARIO="" DETTAGLIO="" FRASE="" HA_FRASE=0 RIMUOVI=()
 while [ $# -gt 0 ]; do
   [ $# -ge 2 ] || { echo "$USO" >&2; exit 2; }
   case "$1" in
@@ -25,6 +26,7 @@ while [ $# -gt 0 ]; do
     --sommario) SOMMARIO="$2" ;;
     --dettaglio) DETTAGLIO="$2" ;;
     --frase) FRASE="$2"; HA_FRASE=1 ;;
+    --rimuovi) RIMUOVI+=("$2") ;;
     *) echo "Argomento sconosciuto: $1. $USO" >&2; exit 2 ;;
   esac
   shift 2
@@ -42,6 +44,12 @@ if [ $HA_FRASE = 0 ] && [ -f .watson/ultimo-messaggio ]; then FRASE="$(cat .wats
 FRASE="$(printf '%s' "$FRASE" | tr '\n' ' ')"
 
 MAPPA=(python3 "$QUI/marauders_map.py")
+for p in ${RIMUOVI[@]+"${RIMUOVI[@]}"}; do
+  case "$p" in
+    inbox/*.md) [[ "$p" != *..* ]] && [ -f "$p" ] || { echo "✗ Bozza inesistente: $p" >&2; exit 2; }; rm -f "$p" ;;
+    *) echo "✗ --rimuovi accetta solo file .md di inbox/: $p" >&2; exit 2 ;;
+  esac
+done
 "${MAPPA[@]}" indice .
 
 if [ "$TIPO" != init ] && [ -z "$(git status --porcelain)" ]; then

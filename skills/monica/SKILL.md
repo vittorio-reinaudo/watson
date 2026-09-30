@@ -36,11 +36,11 @@ allowed-tools: Read, Grep, Glob, Write, Edit, Bash
 
 ## Chiudere un todo
 
-1. Trova il todo aperto: cerca con Grep `stato: aperto` in `note/` e scegli quello che corrisponde alla frase (titolo, owner, argomento). Se due todo aperti corrispondono, domanda chiusa con le opzioni.
+1. Trova il todo aperto: cerca con Grep `stato: aperto` in `note/` (o `${CLAUDE_PLUGIN_ROOT}/scripts/cerca.sh testo "stato: aperto" note`) e scegli quello che corrisponde alla frase (titolo, owner, argomento). Se due todo aperti corrispondono, domanda chiusa con le opzioni.
 2. Con Edit cambia solo `stato: aperto` in `stato: fatto`.
 3. Chiudi: `${CLAUDE_PLUGIN_ROOT}/scripts/azione.sh --tipo aggiorna --scope "alpha/davide" --sommario "fix del login fatto" --dettaglio "todo chiuso"`.
 4. Resoconto: `✅ Monica · Spuntato: "<titolo>"` e, se non è tuo, ` di <owner>`.
 
 ## Elencare i todo
 
-Cerca `stato: aperto` in `note/` (o leggi `indice/note-AAAA-MM.md`, righe `todo aperto`), filtra per owner o progetto, e rispondi con una riga per todo: titolo, owner, scadenza, scaduti per primi. Chiudi con la riga delle fonti. Non scrive, quindi niente `azione.sh`.
+Cerca `stato: aperto` in `note/` con Grep o `cerca.sh` (o leggi `indice/note-AAAA-MM.md`, righe `todo aperto`), filtra per owner o progetto, e rispondi con una riga per todo: titolo, owner, scadenza, scaduti per primi. Chiudi con la riga delle fonti. Non scrive, quindi niente `azione.sh`.

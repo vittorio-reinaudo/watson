@@ -47,6 +47,22 @@ verifica "preferenze permesse" 'permetti Edit "{\"file_path\":\"$B/preferenze.md
 verifica "area di lavoro di Eevee permessa" 'permetti Write "{\"file_path\":\"$HOME/.watson/lavori/p/x.md\"}"'
 verifica "azione.sh permesso" 'permetti Bash "{\"command\":\"$S/azione.sh --tipo cattura --sommario \\\"l'"'"'ultima nota\\\"\"}"'
 
+guarda() { hook guard.py "{\"tool_name\":\"$2\",\"agent_id\":\"x\",\"agent_type\":\"watson:$1\",\"cwd\":\"$B\",\"tool_input\":$3}"; }
+verifica "agente di sola lettura: niente scritture" 'guarda sherlock Write "{\"file_path\":\"$B/note/2026-09/x.md\"}" | grep -q deny'
+verifica "agente di sola lettura: niente delorean" 'guarda q Bash "{\"command\":\"$S/delorean.sh --ultima\"}" | grep -q deny'
+verifica "agente di sola lettura: cerca.sh ammesso" 'guarda sherlock Bash "{\"command\":\"$S/cerca.sh testo luca note\"}" | grep -q allow'
+verifica "eevee non scrive in 221b" 'guarda eevee Write "{\"file_path\":\"$B/note/2026-09/x.md\"}" | grep -q deny'
+verifica "eevee non scrive nel clone (prova 16)" 'guarda eevee Edit "{\"file_path\":\"$PLUGIN/skills/memento/SKILL.md\"}" | grep -q deny'
+verifica "eevee scrive nell area di lavoro" 'guarda eevee Write "{\"file_path\":\"$HOME/.watson/lavori/0001-x/esempi.md\"}" | grep -q allow'
+verifica "wall-e può chiudere con azione.sh" 'guarda wall-e Bash "{\"command\":\"$S/azione.sh --tipo mantieni --sommario x\"}" | grep -q allow'
+verifica "nessuno esegue eevee_applica.sh tranne l orchestratore" 'guarda eevee Bash "{\"command\":\"$S/eevee_applica.sh x\"}" | grep -q deny'
+mkdir -p .watson && echo "[dry-run] luca rilascio" > .watson/ultimo-messaggio
+verifica "dry-run: nessuna scrittura" 'nega Write "{\"file_path\":\"$B/note/2026-09/x.md\"}"'
+verifica "dry-run: nessuno script" 'nega Bash "{\"command\":\"$S/azione.sh --tipo cattura --sommario x\"}"'
+rm .watson/ultimo-messaggio
+verifica "cerca.sh fuori dai confini rifiutato" '! "$S/cerca.sh" file "*" /etc >/dev/null 2>&1'
+verifica "cerca.sh trova le bozze e i todo" '"$S/cerca.sh" testo "stato: aperto" note | grep -q stima-refactor'
+
 echo "— Lint (prova 6)"
 lint() { hook lint_nota.py "{\"cwd\":\"$B\",\"tool_input\":{\"file_path\":\"$B/$1\"}}"; }
 nota() { mkdir -p note/2026-09; printf -- "---\ntitolo: Prova\n%s\nquando: 2026-09-30 10:00\ntodo: false\n---\n" "$2" > "note/2026-09/$1.md"; }

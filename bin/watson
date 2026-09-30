@@ -106,13 +106,14 @@ while :; do
       exit 1
     fi
   fi
-  case "$RISULTATO" in
-    "? "*) ;;
-    *) printf '%s\n' "$RISULTATO"; exit 0 ;;
-  esac
-  # Protocollo domanda: mostra domanda e opzioni, legge la risposta, la invia nella stessa sessione.
+  # Protocollo domanda: una riga che inizia con "? " (di norma la prima) apre una domanda.
+  if ! printf '%s\n' "$RISULTATO" | grep -q '^? '; then
+    printf '%s\n' "$RISULTATO"
+    exit 0
+  fi
   DOMANDA="$RISULTATO"
-  printf '%s\n' "${RISULTATO#? }"
+  printf '%s\n' "$RISULTATO" | sed 's/^? //'
+  # Mostra domanda e opzioni, legge la risposta, la invia nella stessa sessione.
   if ! IFS= read -r -p "> " RISPOSTA || [ -z "$RISPOSTA" ]; then
     echo
     bozza "domanda senza risposta"

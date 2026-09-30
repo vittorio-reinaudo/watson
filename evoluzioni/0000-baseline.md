@@ -67,6 +67,21 @@ Costruire Watson a partire da `SPEC.md` (versione 0.2 della specifica) come plug
 - **Annullare.** `delorean.sh --ultima` annulla l'ultima azione registrata, anche se è un annullamento (così si annulla un annullamento); la creazione di `221b` (`init`) non si annulla. Prima di annullare servono zero modifiche non registrate. Un revert lascia sempre il diario com'era: l'annullamento è una riga nuova.
 - **zsh.** `?` e `*` nelle frasi vengono espansi da zsh, che si ferma se non trova file corrispondenti; il README suggerisce `alias watson='noglob watson'`.
 
+### Assunzioni della fase 3
+
+- **Glob e Grep non sempre esistono.** In alcune sessioni di Claude Code gli strumenti Glob e Grep non sono disponibili ("find files with `find` via the Bash tool instead"). Il guard vieta `find` e `grep` come ogni comando che non sia uno script del plugin, quindi l'alternativa è lo script di sola lettura `cerca.sh` (file per nome, righe per testo), limitato a `221b`, al prodotto e all'area di lavoro.
+- **Lettura fuori da 221b.** In headless Claude Code nega le letture fuori dalla cartella del progetto nonostante la regola `Read`: il guard concede esplicitamente la lettura del prodotto e di `~/.watson/lavori/`.
+- **Permessi per agente.** Il guard riconosce l'agente dal campo `agent_type` dell'hook. Sherlock, Whistledown, Q e qualsiasi agente non elencato possono solo leggere e usare `cerca.sh`; Wall-E può anche scrivere in 221b e chiudere con `azione.sh`; Eevee scrive solo in `~/.watson/lavori/`. Solo l'orchestratore esegue `eevee_applica.sh` e `delorean.sh`.
+- **Niente agenti in background.** Con agenti in background l'orchestratore rispondeva da solo alle loro domande e le notifiche finivano come messaggi dell'utente. Le impostazioni di `221b` impostano `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, e l'hook d'invio ignora le notifiche dei task.
+- **Dry-run garantito dal guard.** Se l'ultimo messaggio inizia con `[dry-run]`, il guard nega ogni strumento tranne la lettura.
+- **`test_routing.sh`.** Confronta famiglia, componente, tipo e ambiguità di ogni intenzione, nell'ordine. Normalizza il prefisso del plugin (`watson:sherlock`) e le forme verbali delle famiglie (`aggiorna` è `aggiornare`). Una frase che sbaglia al primo tentativo e torna giusta al secondo è segnalata come instabile ma non fa fallire il test: un instradamento davvero cambiato sbaglia entrambe le volte. In `esempi.md` più valori accettabili si separano con `/`.
+- **Contabilità di `eevee_applica.sh`.** Versione (minore successiva a quella del plugin e a ogni tag), voce del `CHANGELOG.md`, `stato: applicata` e `versione:` della proposta li scrive lo script, non Eevee. Le prove prima di applicare sono `tests/test_script.sh` e `test_routing.sh` (con `esempi-personali.md` se esiste) su una copia del clone. Rifiuta se il clone ha modifiche non registrate o non è su un ramo (per esempio dopo `git checkout watson-v0.3`). Non gestisce la cancellazione di file.
+- **`--annulla`.** Revert dell'ultimo commit `eevee:` con una nuova versione e un nuovo tag; `CHANGELOG.md` e le proposte restano come storia, con una voce che dice cosa è stato annullato. Prima del commit girano i test degli script.
+- **Annullare una modifica a Watson** passa dalla skill `delorean` (è un annullamento), che esegue `eevee_applica.sh --annulla`.
+- **Wall-E in due tempi.** Piano senza scrivere, poi esecuzione del piano approvato; una bozza ripresa esce da `inbox/` con `azione.sh --rimuovi`, nello stesso commit in cui il suo contenuto entra nel grafo.
+- **Più domande di Eevee.** Eevee prepara sempre la proposta completa con dei default e fa al massimo una domanda; l'orchestratore le pone una alla volta. Il wrapper riconosce una domanda anche se la riga `? ` non è la prima.
+- **Preferenze apprese.** Una riga in fondo a `preferenze.md` nel formato `- <regola>. (AAAA-MM-GG, da: "<frase>")`, chiusa come azione `impara`: `watson annulla` la toglie come qualsiasi altra azione.
+
 ### Divergenze note tra README e comportamento
 
 - `watson nuovo progetto alpha: …` (README, primo avvio) viene letto come `watson nuovo` + frase: parte una sessione nuova con il messaggio "progetto alpha: …", che Watson riconosce comunque come creazione di un progetto. Lasciato così su indicazione dell'utente.

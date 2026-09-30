@@ -6,7 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/contesto.sh\" regole"
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/contesto.sh\" regole 1"
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/contesto.sh\" regole 2"
           },
           {
             "type": "command",

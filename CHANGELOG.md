@@ -2,6 +2,18 @@
 
 Ogni versione rimanda alle proposte in `evoluzioni/` che l'hanno prodotta.
 
+## watson-v0.3 — evolvere
+
+Proposta: [0000-baseline](evoluzioni/0000-baseline.md).
+
+- Riconoscimento delle richieste su Watson stesso, con la domanda a tre opzioni: lavorarci ora con Eevee, annotarla come idea, era una nota normale.
+- Agente `eevee`: prepara proposte in `evoluzioni/` e file modificati nell'area di lavoro `~/.watson/lavori/`, con suggerimenti e casi limite.
+- `eevee_applica.sh`: unica strada per modificare il prodotto. Mostra le differenze, prova la modifica su una copia e rifiuta se i test falliscono, poi commit, tag, changelog e aggiornamento del plugin; `--annulla` torna indietro con una nuova versione.
+- Agente `wall-e`: riordino di inbox e incoerenze, con piano mostrato prima.
+- Preferenze apprese in `preferenze.md`, annullabili.
+- `esempi.md`, modalità dry-run e `test_routing.sh` per verificare il riconoscimento delle intenzioni.
+- `cerca.sh`, ricerca in sola lettura per le sessioni senza Glob e Grep; permessi del guard per agente.
+
 ## watson-v0.2 — interrogare e annullare
 
 Proposta: [0000-baseline](evoluzioni/0000-baseline.md).

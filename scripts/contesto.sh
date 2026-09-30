@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Hook di avvio della sessione e di invio di ogni messaggio.
-#   SessionStart, contesto.sh regole     inietta WATSON.md
+#   SessionStart, contesto.sh regole N   inietta la parte N di WATSON.md
 #   SessionStart, contesto.sh resoconto  inietta resoconto.md
 #   SessionStart, contesto.sh            registra le modifiche fatte a mano, verifica le invarianti e inietta
 #                                        incoerenze, indice delle entità, preferenze, ultime righe del diario
 #   UserPromptSubmit                     salva il messaggio (per le bozze) e aggiunge data e ora correnti
-# Il contesto è diviso in tre parti perché Claude Code tronca ogni additionalContext oltre i 10.000 caratteri.
+# Il contesto è diviso in più parti perché Claude Code tronca ogni additionalContext oltre i 10.000 caratteri.
 set -uo pipefail
 
 QUI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -46,8 +46,10 @@ if ultima_risposta(dati.get("transcript_path") or "").lstrip().startswith("? "):
             messaggio = f.read() + " → " + messaggio
     except OSError:
         pass
-with open(".watson/ultimo-messaggio", "w", encoding="utf-8") as f:
-    f.write(messaggio)
+# Le notifiche di sistema (per esempio la fine di un task) non sono messaggi dell'utente.
+if not dati.get("prompt", "").lstrip().startswith("<task-notification>"):
+    with open(".watson/ultimo-messaggio", "w", encoding="utf-8") as f:
+        f.write(messaggio)
 t = os.environ.get("WATSON_ADESSO")
 ora = datetime.datetime.strptime(t, "%Y-%m-%d %H:%M") if t else datetime.datetime.now()
 giorni = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
@@ -72,7 +74,11 @@ ORIGINE="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("sourc
 if [ "$ORIGINE" = resume ] && [ "$PARTE" != dati ]; then exit 0; fi
 
 case "$PARTE" in
-  regole) sed "s|\${CLAUDE_PLUGIN_ROOT}|$PLUGIN|g" "$PLUGIN/WATSON.md" | inietta; exit 0 ;;
+  regole)
+    # WATSON.md si inietta in due parti, divise dal marcatore <!-- seconda parte -->.
+    awk -v parte="${2:-1}" '/<!-- seconda parte -->/ { n = 1; next } (n + 1) == parte' "$PLUGIN/WATSON.md" |
+      sed "s|\${CLAUDE_PLUGIN_ROOT}|$PLUGIN|g" | inietta
+    exit 0 ;;
   resoconto) inietta < "$PLUGIN/resoconto.md"; exit 0 ;;
 esac
 
