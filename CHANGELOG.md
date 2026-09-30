@@ -2,6 +2,10 @@
 
 Ogni versione rimanda alle proposte in `evoluzioni/` che l'hanno prodotta.
 
+## watson-v0.4 — Avanzamento in terminale durante l'elaborazione
+
+Proposta: [0001-avanzamento-in-terminale](evoluzioni/0001-avanzamento-in-terminale.md).
+
 ## watson-v0.3 — evolvere
 
 Proposta: [0000-baseline](evoluzioni/0000-baseline.md).

@@ -7,6 +7,7 @@
 #   watson nuovo [frase]    scarta la sessione precedente e riparte da zero
 #
 # Un comando entro 10 minuti dal precedente riprende la stessa sessione (221b/.watson/session).
+# Mentre lavora, su stderr (solo se è un terminale) mostra l'avanzamento: vedi scripts/progresso.py.
 set -uo pipefail
 
 FINESTRA=600
@@ -71,11 +72,16 @@ interrotto() {
 }
 trap interrotto INT
 
-# chiedi <messaggio>: esegue un turno headless e mette la risposta in RISULTATO
+# chiedi <messaggio>: esegue un turno headless e mette la risposta in RISULTATO.
+# L'output è un flusso di eventi: progresso.py mostra i passi su stderr (solo in un terminale) e
+# lascia su stdout l'evento finale, così il resoconto resta identico.
 chiedi() {
-  local err uscita
+  local err uscita mostra=()
+  [ -t 2 ] && mostra+=(--mostra)
+  grep -q 'resoconto: sobrio' preferenze.md 2>/dev/null && mostra+=(--sobrio)
   err="$(mktemp)"
-  uscita="$(claude -p "$1" $(opzioni) --output-format json ${EXTRA[@]+"${EXTRA[@]}"} </dev/null 2>"$err")"
+  uscita="$(claude -p "$1" $(opzioni) --output-format stream-json --verbose ${EXTRA[@]+"${EXTRA[@]}"} </dev/null 2>"$err" |
+    python3 "$PLUGIN/scripts/progresso.py" ${mostra[@]+"${mostra[@]}"})"
   [ -n "$uscita" ] || uscita="$(cat "$err")"
   rm -f "$err"
   RIPRENDI=1

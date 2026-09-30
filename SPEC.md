@@ -70,6 +70,21 @@ watson annulla
 - **Interrogazioni:** la risposta stessa, chiusa da una riga con le fonti.
 - **Apprendimento:** se Watson ha imparato una preferenza, un'ultima riga "Ho imparato: ...".
 
+**Avanzamento.** Mentre `watson <frase>` lavora, il terminale mostra una riga per passo, così si vede che Watson non è bloccato. Le righe sono diverse dal resoconto: sono provvisorie, non dichiarano l'azione eseguita e non sostituiscono il resoconto, che resta l'ultima risposta.
+
+```
+💭 Watson · Ci penso…
+📸 Memento · Preparo la polaroid…
+💾 Watson · Chiudo l'azione…
+📸 Memento · Polaroid scattata: "Rilascio fallito" · incidente, per luca su alpha
+```
+
+- Le righe di avanzamento compaiono solo in un terminale, in grigio, su stderr: con l'output rediretto o in una pipe restano solo le righe del resoconto, identiche a prima.
+- Le frasi sono fisse, una per skill, agente o passo (leggere gli appunti, scrivere, chiudere l'azione, salvare una bozza), firmate come il resoconto. Non sono mai generate al momento e non mostrano dettagli tecnici.
+- Una riga non si ripete due volte di seguito; i passi interni a un agente non compaiono, basta la riga dell'agente.
+- La preferenza `resoconto: sobrio` le riduce a emoji e verbo ("📸 Salvo…").
+- La sessione interattiva (`watson` senza argomenti) mostra già l'avanzamento di Claude Code: non cambia.
+
 **Frasi fisse, firmate dalla skill.** Ogni riga si apre con il nome della skill che ha eseguito l'azione, seguito da una frase fissa presa dal suo universo. Le frasi non vengono mai generate al momento: sono modelli sempre uguali, definiti in `resoconto.md`, così il resoconto si scorre a colpo d'occhio.
 
 | Azione | Firma e frase fissa | Riferimento |
@@ -346,7 +361,7 @@ graph LR
 
 **Prodotto e dati separati.** Tutte le sessioni si aprono in `221b`, anche quando si parla di Watson stesso. Nessun componente può scrivere direttamente nel repository `watson`: Eevee prepara le modifiche in un'area di lavoro temporanea (`~/.watson/lavori/`), e l'unica strada per applicarle è lo script `eevee_applica.sh`. Il confine è garantito dal guard, non dalle istruzioni.
 
-**Wrapper.** Il comando `watson` gestisce solo l'esperienza da terminale: modalità veloce o sessione, ripresa entro 10 minuti, ciclo delle domande, salvataggio in bozza se l'utente interrompe con Ctrl-C, stampa del resoconto.
+**Wrapper.** Il comando `watson` gestisce solo l'esperienza da terminale: modalità veloce o sessione, ripresa entro 10 minuti, ciclo delle domande, salvataggio in bozza se l'utente interrompe con Ctrl-C, avanzamento durante l'elaborazione, stampa del resoconto. L'avanzamento non lo decide il modello: il wrapper legge il flusso di eventi di Claude Code (`--output-format stream-json`) e lo traduce in righe fisse con `progresso.py`, così non costa token e non può sporcare il resoconto.
 
 **Permessi.** Dichiarati nel `.claude/settings.json` di ciascun repository, con regole `allow` e `deny`; il guard li rende inaggirabili. L'attribuzione automatica a Claude nei commit è disattivata.
 

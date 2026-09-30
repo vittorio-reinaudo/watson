@@ -165,6 +165,18 @@ PATH="$FINTO:$PATH" WATSON_BRAIN="$B" "$PLUGIN/bin/watson" e su beta </dev/null 
 verifica "entro 10 minuti riprende la sessione" 'tail -1 "$FINTO_LOG" | grep -q -- "--resume"'
 PATH="$FINTO:$PATH" WATSON_BRAIN="$B" "$PLUGIN/bin/watson" nuovo ciao </dev/null >/dev/null 2>&1
 verifica "watson nuovo riparte da zero" 'tail -1 "$FINTO_LOG" | grep -q -- "--session-id"'
+verifica "il wrapper chiede il flusso di eventi" 'tail -1 "$FINTO_LOG" | grep -q -- "--output-format stream-json --verbose"'
+
+echo "— Avanzamento (progresso.py)"
+STREAM='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"watson:memento"}}]}}
+{"type":"assistant","parent_tool_use_id":"t1","message":{"content":[{"type":"tool_use","name":"Read","input":{}}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"/x/scripts/azione.sh --tipo cattura"}}]}}
+{"type":"result","is_error":false,"result":"ok"}'
+avanza() { printf '%s\n' "$STREAM" | NO_COLOR=1 python3 "$S/progresso.py" "$@" 2>&1 >/dev/null; }
+verifica "una riga per passo, nell'ordine" '[ "$(avanza --mostra)" = "$(printf "💭 Watson · Ci penso…\n📸 Memento · Preparo la polaroid…\n💾 Watson · Chiudo l'"'"'azione…")" ]'
+verifica "sobrio: solo emoji e verbo" '[ "$(avanza --mostra --sobrio | sed -n 2p)" = "📸 Salvo…" ]'
+verifica "fuori da un terminale nessun avanzamento" '[ -z "$(avanza)" ]'
+verifica "su stdout resta solo l evento finale" '[ "$(printf "%s\n" "$STREAM" | python3 "$S/progresso.py" --mostra 2>/dev/null)" = "$(printf "%s\n" "$STREAM" | tail -1)" ]'
 
 echo "— Identità (prova 11)"
 verifica "solo identità utente nei commit" '! git log --format="%an <%ae> · %cn <%ce>%n%b" | grep -qiE "claude|anthropic|co-authored"'
