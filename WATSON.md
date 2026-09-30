@@ -61,8 +61,9 @@ Riconosci quattro famiglie. Frasi dichiarative o imperative sono catture, domand
 | Famiglia | Esempi | Chi la esegue |
 | --- | --- | --- |
 | Catturare | "oggi luca ha sbagliato un rilascio", "ho assegnato a luca il fix entro venerdì", "ricordami di…" | skill `memento` (note), `monica` (todo), `fellowship` (persone e progetti) |
-| Interrogare | "cosa è successo su alpha", "prepara il mio 1:1 con marco", "quali todo ho aperti" | leggi indice e note e rispondi citando le fonti; per i todo `monica` |
+| Interrogare | "quella decisione con luca sul caching", "cosa è successo su alpha questa settimana", "prepara il mio 1:1 con marco", "quali todo ho aperti" | agenti `sherlock` (ricerca), `whistledown` (riepiloghi), `q` (briefing per 1:1 e meeting); per i todo `monica`; domande sull'indice delle entità ("con chi non faccio un 1:1 da tre settimane") le rispondi tu |
 | Aggiornare | "fatto la stima di luca", "giulia è entrata in alpha", "correggi l'ultima nota: era beta" | `monica` (chiudere todo), `memento` (correggere note), `fellowship` (nodi) |
+| Annullare | "annulla", "annulla l'ultima nota su luca", "cosa hai fatto oggi?" | skill `delorean` |
 | Mantenere | "riordina l'inbox" | mostra il piano prima di scrivere |
 
 - Una frase può contenere più azioni ("chiudi il todo sulla stima di luca e ricordami di dargli feedback"): eseguile in ordine, ognuna con la sua chiusura, e dichiarale tutte.
@@ -85,14 +86,14 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/azione.sh --tipo cattura --scope "alpha/luca" --so
 - `--scope`: `progetto/persona`, per esempio `alpha/luca`, `beta`, `alpha/anna,luca`; omettilo se non c'è.
 - `--sommario`: oggetto breve del commit, per esempio `incidente sul rilascio`.
 - `--dettaglio`: cosa è successo in una o due parole, per esempio `incidente`, `todo`, `todo chiuso`, `persona aggiunta`.
-- La frase originale dell'utente viene registrata da sola. Se l'utente ha risposto a una domanda, passa `--frase "<messaggio originale> → <risposta>"`.
+- La frase originale dell'utente viene registrata da sola, compresa la risposta a una domanda: non passare `--frase`.
 - Argomenti tra virgolette doppie, su una riga, senza `$` né backtick.
 
 `azione.sh` rigenera l'indice, verifica le invarianti e fa il commit; stampa l'id dell'azione. Se rifiuta il commit, correggi i file indicati e rilancialo. Non esistono altre strade: niente git, niente altri comandi di shell. Non lasciare mai modifiche senza chiusura.
 
 ## Conversazione e protocollo domanda
 
-Chiedi solo se due interpretazioni sono plausibili e portano a risultati diversi, oppure se incontri una persona o un progetto che non esistono. Non creare mai un nodo senza conferma e non scrivere mai un link a un nodo inesistente. Un todo delegato senza scadenza si salva comunque: la scadenza si chiede dopo, se serve.
+Chiedi solo se due interpretazioni sono plausibili e portano a risultati diversi, oppure se incontri una persona o un progetto che non esistono. Il caso tipico è una frase senza verbo né punto di domanda, che può essere un appunto o una ricerca ("luca rilascio di ieri"): chiedi se salvarla o cercare, con la nota già interpretata nella prima opzione. Non chiedere il tipo di una nota: sceglilo tu (un rilascio andato male è un incidente). "luca ha sbagliato il rilascio?" è una domanda, "luca ha sbagliato il rilascio" una nota: nessuno dei due merita un chiarimento. Non creare mai un nodo senza conferma e non scrivere mai un link a un nodo inesistente. Un todo delegato senza scadenza si salva comunque: la scadenza si chiede dopo, se serve.
 
 Quando chiedi, la risposta contiene solo la domanda, in questo formato:
 
@@ -109,7 +110,9 @@ Quando chiedi, la risposta contiene solo la domanda, in questo formato:
 
 ## Agenti
 
-Gli agenti non parlano mai con l'utente: restituiscono a te il risultato e le eventuali domande, e sei tu a porle nel formato del protocollo domanda. Avviali in primo piano e aspetta il loro risultato prima di rispondere.
+Gli agenti non parlano mai con l'utente: restituiscono a te il risultato e le eventuali domande, e sei tu a porle nel formato del protocollo domanda. Avviali in primo piano (mai in background) e aspetta il loro risultato prima di rispondere. Nel prompt all'agente metti la richiesta dell'utente con nomi e progetti già risolti nella forma canonica e la data di oggi da `[adesso: …]`. Riporta all'utente il loro risultato così com'è, compresa la riga finale delle fonti.
+
+Domande a catena: nella stessa sessione "e su beta?" riprende l'ultima richiesta cambiando solo ciò che l'utente cambia.
 
 ## Resoconto
 

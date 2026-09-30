@@ -2,6 +2,16 @@
 
 Ogni versione rimanda alle proposte in `evoluzioni/` che l'hanno prodotta.
 
+## watson-v0.2 — interrogare e annullare
+
+Proposta: [0000-baseline](evoluzioni/0000-baseline.md).
+
+- Agenti di sola lettura `sherlock` (ricerca, Haiku), `whistledown` (riepiloghi), `q` (briefing per 1:1 e meeting).
+- Skill `delorean` e `delorean.sh`: annulla un'azione tramite il suo id o l'ultima, con revert registrato come azione `annulla`; si ferma sui conflitti e rifiuta gli annullamenti che lascerebbero il grafo incoerente.
+- Wrapper: continuità di sessione entro 10 minuti, `watson nuovo`, protocollo domanda con opzioni numerate, bozza in `inbox/` se interrompi o non rispondi.
+- La risposta a una domanda si registra nel diario insieme al messaggio che l'ha provocata.
+- Il contesto di ogni messaggio indica anche l'inizio della settimana corrente.
+
 ## watson-v0.1 — catturare con dati consistenti
 
 Proposta: [0000-baseline](evoluzioni/0000-baseline.md).

@@ -23,15 +23,40 @@ if [ "$EVENTO" = UserPromptSubmit ]; then
   python3 - "$INPUT" <<'PY'
 import datetime, json, os, sys
 dati = json.loads(sys.argv[1])
+messaggio = dati.get("prompt", "")
+
+def ultima_risposta(trascrizione):
+    testo = ""
+    try:
+        with open(trascrizione, encoding="utf-8") as f:
+            for riga in f:
+                m = json.loads(riga).get("message") or {}
+                if m.get("role") == "assistant" and isinstance(m.get("content"), list):
+                    parti = [b.get("text", "") for b in m["content"] if b.get("type") == "text"]
+                    if parti:
+                        testo = "".join(parti)
+    except (OSError, ValueError):
+        pass
+    return testo
+
+# Una risposta a una domanda si registra insieme al messaggio che l'ha provocata.
+if ultima_risposta(dati.get("transcript_path") or "").lstrip().startswith("? "):
+    try:
+        with open(".watson/ultimo-messaggio", encoding="utf-8") as f:
+            messaggio = f.read() + " → " + messaggio
+    except OSError:
+        pass
 with open(".watson/ultimo-messaggio", "w", encoding="utf-8") as f:
-    f.write(dati.get("prompt", ""))
+    f.write(messaggio)
 t = os.environ.get("WATSON_ADESSO")
 ora = datetime.datetime.strptime(t, "%Y-%m-%d %H:%M") if t else datetime.datetime.now()
 giorni = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
 g = lambda d: f"{giorni[d.weekday()]} {d:%Y-%m-%d}"
 ieri = ora - datetime.timedelta(days=1)
 prossimi = ", ".join(g(ora + datetime.timedelta(days=i)) for i in range(1, 8))
-testo = f"[adesso: {giorni[ora.weekday()]} {ora:%Y-%m-%d %H:%M} · ieri: {g(ieri)} · prossimi giorni: {prossimi}]"
+lunedi = ora - datetime.timedelta(days=ora.weekday())
+testo = (f"[adesso: {giorni[ora.weekday()]} {ora:%Y-%m-%d %H:%M} · ieri: {g(ieri)} · "
+         f"questa settimana: da {g(lunedi)} · prossimi giorni: {prossimi}]")
 print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": testo}},
                  ensure_ascii=False))
 PY
@@ -41,6 +66,10 @@ fi
 inietta() {
   python3 -c 'import json,sys; print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": sys.stdin.read()}}, ensure_ascii=False))'
 }
+
+# In una sessione ripresa regole e frasi fisse sono già nella conversazione.
+ORIGINE="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1]).get("source",""))' "$INPUT")"
+if [ "$ORIGINE" = resume ] && [ "$PARTE" != dati ]; then exit 0; fi
 
 case "$PARTE" in
   regole) sed "s|\${CLAUDE_PLUGIN_ROOT}|$PLUGIN|g" "$PLUGIN/WATSON.md" | inietta; exit 0 ;;

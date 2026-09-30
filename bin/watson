@@ -2,16 +2,21 @@
 # watson: il comando da terminale. Gestisce solo l'esperienza: permessi, contesto e controlli
 # stanno nelle impostazioni di 221b e negli hook del plugin.
 #
-#   watson <frase>          esegue in 221b e stampa il resoconto
+#   watson <frase>          esegue in 221b e stampa il resoconto; resta aperto solo per una domanda
 #   watson                  apre una sessione interattiva in 221b
-#   watson nuovo [frase]    riparte da una sessione nuova
+#   watson nuovo [frase]    scarta la sessione precedente e riparte da zero
+#
+# Un comando entro 10 minuti dal precedente riprende la stessa sessione (221b/.watson/session).
 set -uo pipefail
 
+FINESTRA=600
 SE="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0")"
 PLUGIN="${WATSON_PLUGIN_DIR:-$(dirname "$(dirname "$SE")")}"
 BRAIN="${WATSON_BRAIN:-$HOME/221b}"
 [ -d "$BRAIN/.git" ] || { echo "Non trovo 221b in $BRAIN: esegui ./install.sh dal clone di watson." >&2; exit 1; }
 cd "$BRAIN"
+mkdir -p .watson
+STATO=.watson/session
 
 # Solo per sviluppo e test: carica il plugin da una cartella invece che dalla versione installata.
 EXTRA=()
@@ -19,30 +24,100 @@ EXTRA=()
 
 if [ "${1:-}" = nuovo ]; then
   shift
-  rm -f .watson/session
+  rm -f "$STATO"
 fi
+
+# Sessione da riprendere, se l'ultima è di meno di 10 minuti fa; altrimenti una nuova con id noto.
+SESSIONE="" RIPRENDI=0
+if [ -f "$STATO" ]; then
+  read -r ID ORA < "$STATO" || true
+  if [ -n "${ID:-}" ] && [ $(( $(date +%s) - ${ORA:-0} )) -lt $FINESTRA ]; then
+    SESSIONE="$ID" RIPRENDI=1
+  fi
+fi
+[ -n "$SESSIONE" ] || SESSIONE="$(python3 -c 'import uuid; print(uuid.uuid4())')"
+segna() { echo "$SESSIONE $(date +%s)" > "$STATO"; }
+opzioni() { if [ $RIPRENDI = 1 ]; then echo --resume "$SESSIONE"; else echo --session-id "$SESSIONE"; fi; }
+
 if [ $# -eq 0 ]; then
-  exec claude ${EXTRA[@]+"${EXTRA[@]}"}
+  segna
+  claude $(opzioni) ${EXTRA[@]+"${EXTRA[@]}"}
+  segna
+  exit 0
 fi
 
 FRASE="$*"
-ERR="$(mktemp)"
-USCITA="$(claude -p "$FRASE" --output-format json ${EXTRA[@]+"${EXTRA[@]}"} </dev/null 2>"$ERR")"
-[ -n "$USCITA" ] || USCITA="$(cat "$ERR")"
-rm -f "$ERR"
-if RISULTATO="$(python3 -c '
+DOMANDA=""
+
+bozza() { # bozza <motivo>: mette in salvo il messaggio e l'eventuale domanda aperta
+  local args=(--messaggio "$FRASE" --motivo "$1")
+  [ -n "$DOMANDA" ] && args+=(--domanda "$DOMANDA")
+  local file
+  if file="$(WATSON_BRAIN_DIR="$BRAIN" "$PLUGIN/scripts/bozza.sh" "${args[@]}")"; then
+    echo "⚠️ Watson · Salvato in bozza: $file ($1)"
+  else
+    echo "✗ Non sono riuscito a salvare la bozza: la frase era \"$FRASE\"" >&2
+  fi
+}
+
+interrotto() {
+  echo
+  if [ -n "$DOMANDA" ]; then
+    bozza "domanda senza risposta"
+  elif [ -n "$(git status --porcelain)" ] || ! git log -1 --format=%B | grep -qF "$FRASE"; then
+    bozza "interrotto"
+  fi
+  exit 130
+}
+trap interrotto INT
+
+# chiedi <messaggio>: esegue un turno headless e mette la risposta in RISULTATO
+chiedi() {
+  local err uscita
+  err="$(mktemp)"
+  uscita="$(claude -p "$1" $(opzioni) --output-format json ${EXTRA[@]+"${EXTRA[@]}"} </dev/null 2>"$err")"
+  [ -n "$uscita" ] || uscita="$(cat "$err")"
+  rm -f "$err"
+  RIPRENDI=1
+  segna
+  RISULTATO="$(python3 -c '
 import json, sys
-d = json.loads(sys.argv[1])
-if d.get("is_error"):
-    sys.exit(1)
-print(d.get("result", ""))' "$USCITA" 2>/dev/null)"; then
-  printf '%s\n' "$RISULTATO"
-else
-  # Nessuna nota persa: se Claude Code non risponde, la frase va comunque in inbox.
-  ERRORE="$(python3 -c 'import json,sys
-try: print(json.loads(sys.argv[1]).get("result") or "errore sconosciuto")
-except Exception: print(sys.argv[1].strip().splitlines()[-1] if sys.argv[1].strip() else "errore sconosciuto")' "$USCITA")"
-  BOZZA="$(WATSON_BRAIN_DIR="$BRAIN" "$PLUGIN/scripts/bozza.sh" --messaggio "$FRASE" --motivo "Claude Code non ha risposto: $ERRORE")"
-  echo "⚠️ Watson · Salvato in bozza: $BOZZA (Claude Code non ha risposto: $ERRORE)"
-  exit 1
-fi
+try:
+    d = json.loads(sys.argv[1])
+except ValueError:
+    print(sys.argv[1].strip().splitlines()[-1] if sys.argv[1].strip() else "errore sconosciuto"); sys.exit(1)
+print(d.get("result") or "errore sconosciuto")
+sys.exit(1 if d.get("is_error") else 0)' "$uscita")"
+}
+
+MESSAGGIO="$FRASE"
+while :; do
+  PRIMA=$RIPRENDI
+  if ! chiedi "$MESSAGGIO"; then
+    RIUSCITO=0
+    if [ $PRIMA = 1 ] && [ "$MESSAGGIO" = "$FRASE" ]; then
+      # La sessione da riprendere non è più disponibile: si riparte da una nuova.
+      SESSIONE="$(python3 -c 'import uuid; print(uuid.uuid4())')" RIPRENDI=0
+      chiedi "$MESSAGGIO" && RIUSCITO=1
+    fi
+    if [ $RIUSCITO = 0 ]; then
+      # Nessuna nota persa: se Claude Code non risponde, la frase va comunque in inbox.
+      bozza "Claude Code non ha risposto: $RISULTATO"
+      exit 1
+    fi
+  fi
+  case "$RISULTATO" in
+    "? "*) ;;
+    *) printf '%s\n' "$RISULTATO"; exit 0 ;;
+  esac
+  # Protocollo domanda: mostra domanda e opzioni, legge la risposta, la invia nella stessa sessione.
+  DOMANDA="$RISULTATO"
+  printf '%s\n' "${RISULTATO#? }"
+  if ! IFS= read -r -p "> " RISPOSTA || [ -z "$RISPOSTA" ]; then
+    echo
+    bozza "domanda senza risposta"
+    exit 0
+  fi
+  MESSAGGIO="$RISPOSTA"
+  DOMANDA=""
+done

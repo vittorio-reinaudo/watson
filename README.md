@@ -40,7 +40,7 @@ I dettagli completi sono in [`SPEC.md`](SPEC.md).
 
 ## Stato
 
-Versione **v0.1**: catturare con dati consistenti. Funzionano note, todo, persone e progetti, le domande chiuse in caso di dubbio, la verifica dei dati e le bozze in `inbox/`. Arrivano nelle prossime versioni: riepiloghi, ricerche e briefing dedicati, `watson annulla`, la continuità tra comandi entro 10 minuti ed Eevee per far evolvere Watson. Le novità di ogni versione sono in [`CHANGELOG.md`](CHANGELOG.md).
+Versione **v0.2**: catturare, interrogare e annullare. Funzionano note, todo, persone e progetti, ricerche, riepiloghi e briefing per 1:1 e meeting, `watson annulla`, la continuità tra comandi entro 10 minuti, le domande chiuse in caso di dubbio e le bozze in `inbox/` quando interrompi. Arriva nella prossima versione Eevee, per far evolvere Watson. Le novità di ogni versione sono in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Requisiti
 
@@ -103,6 +103,12 @@ Se non trova nulla, aggiungi al tuo `~/.zshrc` o `~/.bashrc` la riga seguente e 
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
+```
+
+Se usi zsh, aggiungi anche questa riga al tuo `~/.zshrc`: senza, zsh prova a interpretare `?` e `*` come nomi di file e un comando come `watson e su beta?` si ferma con "no matches found".
+
+```bash
+alias watson='noglob watson'
 ```
 
 ## Primo avvio

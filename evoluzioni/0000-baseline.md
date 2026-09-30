@@ -57,6 +57,16 @@ Costruire Watson a partire da `SPEC.md` (versione 0.2 della specifica) come plug
 - **Il guard** rifiuta nei comandi `$`, backtick, a capo e operatori di shell, anche tra virgolette: meglio un rifiuto in più che una scorciatoia.
 - **Servizi esterni.** Il guard nega in 221b gli strumenti MCP e il web: `221b` contiene dati personali.
 
+### Assunzioni della fase 2
+
+- **Modello "predefinito" degli agenti.** Un agente senza `model` eredita il modello della sessione (Haiku). Per distinguere, come chiede la specifica, `whistledown`, `q` (e in seguito `wall-e` ed `eevee`) usano `model: sonnet`; `sherlock` usa `model: haiku`.
+- **Contesto negli agenti.** Gli agenti non ricevono il contesto di avvio: leggono da soli `indice/entita.md`, e l'orchestratore passa loro nomi già risolti e la data di oggi.
+- **Sessioni.** Il wrapper assegna l'id della sessione (`--session-id`) e lo salva con l'orario in `221b/.watson/session`; entro 10 minuti usa `--resume`. Se la sessione da riprendere non esiste più, riparte da una nuova. Anche `watson` senza argomenti segue la stessa regola. In una sessione ripresa `WATSON.md` e `resoconto.md` non vengono re-iniettati (sono già nella conversazione); la parte dati sì.
+- **Risposte alle domande.** L'hook di invio riconosce dalla trascrizione che l'ultimo messaggio di Watson era una domanda (`? `) e registra la frase come `messaggio originale → risposta`, senza dipendere dal modello.
+- **Interruzioni.** Oltre al caso della domanda aperta, un Ctrl-C mentre Claude Code sta lavorando manda in bozza il messaggio e le eventuali modifiche non registrate, salvo che l'azione sia già stata registrata. Le risposte alle domande si leggono dall'input standard.
+- **Annullare.** `delorean.sh --ultima` annulla l'ultima azione registrata, anche se è un annullamento (così si annulla un annullamento); la creazione di `221b` (`init`) non si annulla. Prima di annullare servono zero modifiche non registrate. Un revert lascia sempre il diario com'era: l'annullamento è una riga nuova.
+- **zsh.** `?` e `*` nelle frasi vengono espansi da zsh, che si ferma se non trova file corrispondenti; il README suggerisce `alias watson='noglob watson'`.
+
 ### Divergenze note tra README e comportamento
 
 - `watson nuovo progetto alpha: …` (README, primo avvio) viene letto come `watson nuovo` + frase: parte una sessione nuova con il messaggio "progetto alpha: …", che Watson riconosce comunque come creazione di un progetto. Lasciato così su indicazione dell'utente.

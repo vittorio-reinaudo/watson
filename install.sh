@@ -56,6 +56,10 @@ else
   echo "✔ 221b creato in $BRAIN"
 fi
 
+case "${SHELL:-}" in
+  *zsh) grep -qs "alias watson='noglob watson'" "$HOME/.zshrc" ||
+          echo "ℹ︎ Con zsh aggiungi a ~/.zshrc: alias watson='noglob watson' (altrimenti \"?\" nelle frasi dà errore)" ;;
+esac
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
   *) echo "ℹ︎ Aggiungi ~/.local/bin al PATH: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;

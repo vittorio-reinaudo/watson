@@ -104,6 +104,52 @@ sed -i.bak 's/\[\[lucaa\]\]/[[luca]]/' note/2026-09/2026-09-23_1500_1-1-luca.md 
 verifica "correzione ammessa" '"$S/azione.sh" --tipo mantieni --sommario "link corretto" --frase x >/dev/null 2>&1 && python3 "$S/marauders_map.py" verifica . >/dev/null'
 verifica "tipo manuale riservato agli script" '! "$S/azione.sh" --tipo manuale --sommario x >/dev/null 2>&1'
 
+echo "— DeLorean (prova 15)"
+nuova
+nota da-annullare 'tipo: nota'
+"$S/azione.sh" --tipo cattura --sommario "nota da annullare" --frase "nota" >/dev/null
+USCITA="$("$S/delorean.sh" --ultima --frase "annulla" 2>&1)"
+verifica "revert dell'ultima azione" '[ ! -e note/2026-09/da-annullare.md ] && git log -1 --format=%s | grep -q "^annulla: annulla a-"'
+verifica "riga annulla nel diario che punta all'azione" 'tail -1 diario-di-bordo/*.md | grep -qE "· annulla · → a-[0-9-]+ · \"annulla\""'
+verifica "il diario resta di sola aggiunta" '[ "$(grep -c "^a-" diario-di-bordo/*.md)" = 3 ]'
+verifica "invarianti rispettate dopo l'annullamento" 'python3 "$S/marauders_map.py" verifica . >/dev/null'
+"$S/delorean.sh" --ultima --frase "annulla l'annullamento" >/dev/null 2>&1
+verifica "anche un annullamento si annulla" '[ -e note/2026-09/da-annullare.md ]'
+nota conflitto 'tipo: nota'
+PRIMA_ID="$("$S/azione.sh" --tipo cattura --sommario uno --frase uno)"
+sed -i.bak 's/^titolo: Prova$/titolo: Cambiata/' note/2026-09/conflitto.md && rm note/2026-09/*.bak
+"$S/azione.sh" --tipo aggiorna --sommario due --frase due >/dev/null
+N0="$(commit)"
+"$S/delorean.sh" "$PRIMA_ID" >/dev/null 2>&1; CODICE=$?
+verifica "conflitto: uscita 2, nessuna modifica" '[ $CODICE = 2 ] && [ "$(commit)" = "$N0" ] && [ -z "$(git status --porcelain)" ]'
+printf -- '---\nnome: giulia\nalias: []\nprogetti: ["[[alpha]]"]\n---\n' > persone/giulia.md
+GIULIA="$("$S/azione.sh" --tipo cattura --sommario giulia --frase giulia)"
+nota su-giulia 'tipo: nota
+chi: ["[[giulia]]"]'
+"$S/azione.sh" --tipo cattura --sommario "nota su giulia" --frase x >/dev/null
+N0="$(commit)"
+"$S/delorean.sh" "$GIULIA" >/dev/null 2>&1; CODICE=$?
+verifica "revert incoerente rifiutato" '[ $CODICE = 1 ] && [ "$(commit)" = "$N0" ] && [ -e persone/giulia.md ] && [ -z "$(git status --porcelain)" ]'
+
+echo "— Wrapper (prova 12, con un claude finto)"
+nuova
+FINTO="$(mktemp -d)"
+cat > "$FINTO/claude" <<'FAKE'
+#!/usr/bin/env bash
+echo "$@" >> "$FINTO_LOG"
+python3 -c 'import json; print(json.dumps({"type": "result", "is_error": False, "session_id": "x", "result": "? Vuoi salvarlo come nota o sapere cosa è successo?\n  1. nota (incidente su alpha, con luca)\n  2. cerca nelle note"}))'
+FAKE
+chmod +x "$FINTO/claude"
+export FINTO_LOG="$FINTO/log"
+USCITA="$(PATH="$FINTO:$PATH" WATSON_BRAIN="$B" "$PLUGIN/bin/watson" luca rilascio di ieri </dev/null 2>&1)"
+verifica "domanda mostrata con le opzioni" 'printf "%s" "$USCITA" | grep -q "1. nota (incidente su alpha, con luca)"'
+verifica "senza risposta la frase va in inbox con la domanda" 'grep -q "luca rilascio di ieri" inbox/*_bozza.md && grep -q "Domanda rimasta aperta" inbox/*_bozza.md'
+verifica "bozza registrata come azione" 'git log -1 --format=%s | grep -q "^bozza:" && python3 "$S/marauders_map.py" verifica . >/dev/null'
+PATH="$FINTO:$PATH" WATSON_BRAIN="$B" "$PLUGIN/bin/watson" e su beta </dev/null >/dev/null 2>&1
+verifica "entro 10 minuti riprende la sessione" 'tail -1 "$FINTO_LOG" | grep -q -- "--resume"'
+PATH="$FINTO:$PATH" WATSON_BRAIN="$B" "$PLUGIN/bin/watson" nuovo ciao </dev/null >/dev/null 2>&1
+verifica "watson nuovo riparte da zero" 'tail -1 "$FINTO_LOG" | grep -q -- "--session-id"'
+
 echo "— Identità (prova 11)"
 verifica "solo identità utente nei commit" '! git log --format="%an <%ae> · %cn <%ce>%n%b" | grep -qiE "claude|anthropic|co-authored"'
 
