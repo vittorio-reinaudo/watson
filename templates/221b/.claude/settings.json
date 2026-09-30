@@ -1,0 +1,31 @@
+{
+  "enabledPlugins": {
+    "watson@watson": true
+  },
+  "model": "haiku",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Skill",
+      "Agent"
+    ],
+    "deny": [
+      "Bash(git:*)",
+      "Edit(/indice/**)",
+      "Write(/indice/**)",
+      "Edit(/diario-di-bordo/**)",
+      "Write(/diario-di-bordo/**)",
+      "Edit(/.claude/**)",
+      "Write(/.claude/**)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "watson",
+  "version": "0.1.0",
+  "description": "Assistente da terminale per tech lead: appunti in linguaggio naturale, collegati a persone e progetti e interrogabili in seguito.",
+  "author": {
+    "name": "Watson"
+  },
+  "license": "MIT"
+}

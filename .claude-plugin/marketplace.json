@@ -1,0 +1,14 @@
+{
+  "name": "watson",
+  "description": "Marketplace locale di Watson: contiene solo il plugin watson, servito da questo clone.",
+  "owner": {
+    "name": "Watson"
+  },
+  "plugins": [
+    {
+      "name": "watson",
+      "source": "./",
+      "description": "Assistente da terminale per tech lead."
+    }
+  ]
+}

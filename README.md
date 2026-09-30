@@ -38,6 +38,10 @@ Due garanzie valgono sempre:
 
 I dettagli completi sono in [`SPEC.md`](SPEC.md).
 
+## Stato
+
+Versione **v0.1**: catturare con dati consistenti. Funzionano note, todo, persone e progetti, le domande chiuse in caso di dubbio, la verifica dei dati e le bozze in `inbox/`. Arrivano nelle prossime versioni: riepiloghi, ricerche e briefing dedicati, `watson annulla`, la continuità tra comandi entro 10 minuti ed Eevee per far evolvere Watson. Le novità di ogni versione sono in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Requisiti
 
 - [Claude Code](https://docs.claude.com/en/docs/claude-code) installato e con l'accesso già configurato (`claude` deve funzionare nel terminale)

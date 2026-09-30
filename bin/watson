@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# watson: il comando da terminale. Gestisce solo l'esperienza: permessi, contesto e controlli
+# stanno nelle impostazioni di 221b e negli hook del plugin.
+#
+#   watson <frase>          esegue in 221b e stampa il resoconto
+#   watson                  apre una sessione interattiva in 221b
+#   watson nuovo [frase]    riparte da una sessione nuova
+set -uo pipefail
+
+SE="$(python3 -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' "$0")"
+PLUGIN="${WATSON_PLUGIN_DIR:-$(dirname "$(dirname "$SE")")}"
+BRAIN="${WATSON_BRAIN:-$HOME/221b}"
+[ -d "$BRAIN/.git" ] || { echo "Non trovo 221b in $BRAIN: esegui ./install.sh dal clone di watson." >&2; exit 1; }
+cd "$BRAIN"
+
+# Solo per sviluppo e test: carica il plugin da una cartella invece che dalla versione installata.
+EXTRA=()
+[ -n "${WATSON_PLUGIN_DIR:-}" ] && EXTRA=(--plugin-dir "$WATSON_PLUGIN_DIR")
+
+if [ "${1:-}" = nuovo ]; then
+  shift
+  rm -f .watson/session
+fi
+if [ $# -eq 0 ]; then
+  exec claude ${EXTRA[@]+"${EXTRA[@]}"}
+fi
+
+FRASE="$*"
+ERR="$(mktemp)"
+USCITA="$(claude -p "$FRASE" --output-format json ${EXTRA[@]+"${EXTRA[@]}"} </dev/null 2>"$ERR")"
+[ -n "$USCITA" ] || USCITA="$(cat "$ERR")"
+rm -f "$ERR"
+if RISULTATO="$(python3 -c '
+import json, sys
+d = json.loads(sys.argv[1])
+if d.get("is_error"):
+    sys.exit(1)
+print(d.get("result", ""))' "$USCITA" 2>/dev/null)"; then
+  printf '%s\n' "$RISULTATO"
+else
+  # Nessuna nota persa: se Claude Code non risponde, la frase va comunque in inbox.
+  ERRORE="$(python3 -c 'import json,sys
+try: print(json.loads(sys.argv[1]).get("result") or "errore sconosciuto")
+except Exception: print(sys.argv[1].strip().splitlines()[-1] if sys.argv[1].strip() else "errore sconosciuto")' "$USCITA")"
+  BOZZA="$(WATSON_BRAIN_DIR="$BRAIN" "$PLUGIN/scripts/bozza.sh" --messaggio "$FRASE" --motivo "Claude Code non ha risposto: $ERRORE")"
+  echo "⚠️ Watson · Salvato in bozza: $BOZZA (Claude Code non ha risposto: $ERRORE)"
+  exit 1
+fi
