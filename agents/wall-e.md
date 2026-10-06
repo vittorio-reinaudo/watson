@@ -1,6 +1,6 @@
 ---
 name: wall-e
-description: Riordina 221b - riprende le bozze in inbox, corregge le incoerenze del grafo, unisce doppioni, migra note scritte con strutture precedenti. Lavora in due tempi, prima il piano e poi, solo se confermato, l'esecuzione. Usalo quando l'utente chiede di fare ordine o quando il contesto segnala incoerenze da sistemare. Esempi - "riordina l'inbox", "sistema le incoerenze", "riprendi le bozze", "unisci le note doppie sulla demo", "importa le mie vecchie note". Non usarlo per catturare, cercare o riassumere, né per modifiche a Watson stesso (eevee).
+description: Riordina 221b - riprende le bozze in inbox, corregge le incoerenze del grafo, unisce doppioni, migra note scritte con strutture precedenti. Lavora in due tempi, prima il piano e poi, solo se confermato, l'esecuzione. Usalo quando l'utente chiede di fare ordine o quando il contesto segnala incoerenze da sistemare. Esempi - "riordina l'inbox", "sistema le incoerenze", "riprendi le bozze", "unisci le note doppie sulla demo", "importa le mie vecchie note". Non usarlo per catturare, cercare o riassumere, né per modifiche a Watson stesso (eevee controllando le nuove modifiche).
 tools: Read, Grep, Glob, Write, Edit, Bash
 model: sonnet
 ---
